@@ -1,5 +1,6 @@
 using ApiMinimal.Data;
 using ApiMinimal.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MiniValidation;
 
@@ -53,6 +54,40 @@ app.MapPost("/cliente", async (EmployeeContext context, ClienteEntity cliente) =
     .Produces<ClienteEntity>(StatusCodes.Status201Created)
     .Produces<ClienteEntity>(StatusCodes.Status400BadRequest)
     .WithDisplayName("PostCliente")
+    .WithTags("Cliente");
+
+app.MapPut("/cliente/{id}", async (Guid id, EmployeeContext context, ClienteEntity cliente) =>
+{
+    var clienteBase = await context.Clientes.AsNoTracking<ClienteEntity>().FirstOrDefaultAsync(fornec => fornec.Id == id);
+    if (clienteBase == null)
+        return Results.NotFound();
+    if (!MiniValidator.TryValidate(cliente, out var errors))
+        return Results.ValidationProblem(errors);
+    context.Clientes.Update(cliente);
+    var result = await context.SaveChangesAsync();
+    return result > 0
+    ? Results.NoContent() : Results.BadRequest("Houve um erro ao atualizar cliente.");
+})
+    .ProducesValidationProblem()
+    .Produces(StatusCodes.Status204NoContent)
+    .Produces(StatusCodes.Status400BadRequest)
+    .WithName("PutCliente")
+    .WithTags("Cliente");
+
+app.MapDelete("/cliente/{id}", async (Guid id, EmployeeContext context) =>
+{
+    var contextBase = await context.Clientes.FindAsync(id);
+    if (contextBase == null)
+        return Results.NotFound();
+    context.Clientes.Remove(contextBase);
+    var result = await context.SaveChangesAsync();
+    return result > 0
+    ? Results.NoContent() : Results.BadRequest("Houve um erro, não foi possível remover cliente.");
+})
+    .Produces(StatusCodes.Status204NoContent)
+    .Produces(StatusCodes.Status404NotFound)
+    .Produces(StatusCodes.Status400BadRequest)
+    .WithName("DeleteCliente")
     .WithTags("Cliente");
 
 app.Run();
